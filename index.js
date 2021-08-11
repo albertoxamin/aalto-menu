@@ -58,24 +58,38 @@ bot.on('callback_query', (ctx) => {
 var lastUnix = ''
 var cachedMessage = ''
 var canteens = []
+var menus = []
 
 const getCanteens = function (callback, date) {
 	let m = moment().utcOffset(0)
 	m.set({ hour: 0, minute: 0, second: 0, millisecond: 0 })
 	let todayUnix = m.unix().toString() + '000'
 	if (todayUnix != lastUnix || date != undefined) {
-		lastUnix = lastUnix
+		console.log('Update data ' + todayUnix + ' ' + lastUnix)
+		lastUnix = todayUnix
 		request(`https://kitchen.kanttiinit.fi/restaurants?lang=en&ids=1,2,3,5,7,8,41,45,50,51,52,59,64&priceCategories=student,studentPremium`, (err, response, body) => {
 			if (err || response.statusCode != 200)
 				return callback('Cannot connect to kanttiinit.fi!')
 			canteens = JSON.parse(body)
-			canteens = canteens.filter(y => y.openingHours[moment().isoWeekday()-1] != null)
+			canteens = canteens.filter(y => y.openingHours[moment().isoWeekday() - 1] != null)
 			let message = 'Open restaurants *today*:\n'
 			canteens.forEach(canteen => {
-				message += `${canteen.name}\t ${canteen.openingHours[moment().isoWeekday()-1]}\n📍[Address](https://www.google.com/maps/search/?api=1&query=${canteen.address})\n\n`
+				message += `${canteen.name}\t ${canteen.openingHours[moment().isoWeekday() - 1]}\n📍[Address](https://www.google.com/maps/search/?api=1&query=${canteen.address})\n\n`
 			});
 			cachedMessage = message
-			callback(message)
+			let url = `https://kitchen.kanttiinit.fi/menus?lang=en&restaurants=${canteens.map(x => x.id)}&days=${moment().format("YYYY-MM-DD")}`
+			request(url, (err, response, body) => {
+				if (err || response.statusCode != 200)
+					return callback('Cannot connect to kanttiinit.fi!')
+				let data = JSON.parse(body)
+				menus = []
+				canteens.map(x => x.id).forEach(id => {
+					menus.push(data[`${id}`][`${moment().format("YYYY-MM-DD")}`])
+					if (menus[menus.length - 1])
+						menus[menus.length - 1].id = id
+				})
+				callback(message)
+			})
 		})
 	} else {
 		callback(cachedMessage)
@@ -87,38 +101,27 @@ bot.on('text', ctx => {
 	getCanteens(res => ctx.replyWithMarkdown(res,
 		Markup.inlineKeyboard(
 			canteens.map(x => [Markup.callbackButton(x.name, 'menu_' + x.id)])
-		).extra({disable_web_page_preview: true})))
+		).extra({ disable_web_page_preview: true })))
 })
 
 bot.on('inline_query', async ({ inlineQuery, answerInlineQuery }) => {
+	console.log('Inline query received')
 	getCanteens(() => {
-	let url = `https://kitchen.kanttiinit.fi/menus?lang=en&restaurants=${canteens.map(x => x.id)}&days=${moment().format("YYYY-MM-DD")}`
-		request(url, (err, response, body) => {
-			if (err || response.statusCode != 200)
-				return callback('Cannot connect to kanttiinit.fi!')
-			let data = JSON.parse(body)
-			let menus = []
-			canteens.map(x => x.id).forEach(id => {
-				menus.push(data[`${id}`][`${moment().format("YYYY-MM-DD")}`])
-				if (menus[menus.length-1])
-					menus[menus.length-1].id = id
-			})
-			let results = menus.filter(x => x).map((x, i) => {
-				let msg = msgCanteenMenu(x, x.id)
-				return {
-					type: 'article',
-					id: crypto.createHash('md5').update(msg).digest('hex'),
-					title: canteens.filter(y => y.id == x.id)[0].name,
-					input_message_content: {
-						message_text: msg,
-						parse_mode: 'HTML',
-					}
+		console.log('Menus available:' + menus.length)
+		let results = menus.filter(x => x).map((x, i) => {
+			let msg = msgCanteenMenu(x, x.id)
+			return {
+				type: 'article',
+				id: crypto.createHash('md5').update(msg).digest('hex'),
+				title: canteens.filter(y => y.id == x.id)[0].name,
+				input_message_content: {
+					message_text: msg,
+					parse_mode: 'HTML',
 				}
-			})
-			answerInlineQuery(results)
+			}
 		})
-		
-	})
+		answerInlineQuery(results)
+	}, undefined)
 })
 
 bot.catch((err) => {
