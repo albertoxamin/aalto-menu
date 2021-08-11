@@ -14,13 +14,20 @@ try { config = require('./config') } catch (err) {
 const telegram = new Telegram(config.token, null)
 const bot = new Telegraf(config.token)
 
-const msgCanteenMenu = (obj, id) => {
-	let message = `<b>${canteens.filter(x => x.id == id)[0].name}</b> Menu for today:\n`
-	obj.forEach(d => {
+const schedule = require('node-schedule');
+
+const job = schedule.scheduleJob('0 */1 * * *', function () {
+	getCanteens(() => { })
+});
+
+const msgCanteenMenu = (obj) => {
+	let canteen = canteens.filter(x => x.id === obj.id)[0]
+	let message = `<b>${canteen.name}</b> Menu for today:\n\n`
+	obj.menu.forEach(d => {
 		if (d.title)
 			message += `${d.title} <i>${d.properties}</i>\n`
 	})
-	return message + `<a href="https://www.google.com/maps/search/?api=1&query=${canteens.filter(x => x.id == id)[0].address}">Location 📍</a>`
+	return message + `\n<a href="https://www.google.com/maps/search/?api=1&query=${canteen.address}">📍 Location</a>\n⏰️ ${canteen.openingHours[moment().isoWeekday() - 1]}`
 }
 
 
@@ -31,27 +38,22 @@ bot.telegram.getMe().then((bot_informations) => {
 
 bot.command(['help', 'start'], ctx => {
 	ctx.replyWithMarkdown(
-		'Welcome to Aalto Menu.\n' +
-		'Contribute https://github.com/albertoxamin/aalto-menu\n')
+		'Welcome to *Aalto Menu bot*.\n' +
+		'You can even use the bot inline: try typing @aaltomenubot\n' +
+		'The bot is open source, contribute https://github.com/albertoxamin/aalto-menu\n', extra={ disable_web_page_preview: true })
 })
 
 
 bot.on('callback_query', (ctx) => {
 	let data = ctx.callbackQuery.data
 	if (data.indexOf('menu_') != -1) {
-		getCanteens(() => { })
 		let id = data.split('_')[1]
-		let url = `https://kitchen.kanttiinit.fi/menus?lang=en&restaurants=${id}&days=${moment().format("YYYY-MM-DD")}`
-		request(url, (err, response, body) => {
-			if (err || response.statusCode != 200)
-				return callback('Cannot connect to kanttiinit.fi!')
-			let obj = JSON.parse(body)[`${id}`][`${moment().format("YYYY-MM-DD")}`]
-			if (obj) {
-				ctx.replyWithHTML(msgCanteenMenu(obj, id))
-			} else {
-				ctx.replyWithMarkdown(`*${canteens.filter(x => x.id == id)[0].name}* No menu for today!`)
-			}
-		})
+		let obj = menus.filter(x => x.id == id)[0]
+		if (obj) {
+			ctx.replyWithHTML(msgCanteenMenu(obj))
+		} else {
+			ctx.replyWithMarkdown(`*${canteens.filter(x => x.id == id)[0].name}* No menu for today!`)
+		}
 	}
 })
 
@@ -84,9 +86,10 @@ const getCanteens = function (callback, date) {
 				let data = JSON.parse(body)
 				menus = []
 				canteens.map(x => x.id).forEach(id => {
-					menus.push(data[`${id}`][`${moment().format("YYYY-MM-DD")}`])
-					if (menus[menus.length - 1])
-						menus[menus.length - 1].id = id
+					menus.push({
+						menu: data[`${id}`][`${moment().format("YYYY-MM-DD")}`],
+						id: id
+					})
 				})
 				callback(message)
 			})
@@ -108,8 +111,8 @@ bot.on('inline_query', async ({ inlineQuery, answerInlineQuery }) => {
 	console.log('Inline query received')
 	getCanteens(() => {
 		console.log('Menus available:' + menus.length)
-		let results = menus.filter(x => x).map((x, i) => {
-			let msg = msgCanteenMenu(x, x.id)
+		let results = menus.filter(x => x.menu).map((x, i) => {
+			let msg = msgCanteenMenu(x)
 			return {
 				type: 'article',
 				id: crypto.createHash('md5').update(msg).digest('hex'),
