@@ -1,0 +1,14 @@
+{
+  "name": "aalto-menu",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "moment": "^2.29.1",
+    "request": "^2.88.2",
+    "telegraf": "3.38.0"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}
