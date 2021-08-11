@@ -20,7 +20,7 @@ const msgCanteenMenu = (obj, id) => {
 		if (d.title)
 			message += `${d.title} <i>${d.properties}</i>\n`
 	})
-	return message
+	return message + `<a href="https://www.google.com/maps/search/?api=1&query=${canteens.filter(x => x.id == id)[0].address}">Location 📍</a>`
 }
 
 
@@ -70,7 +70,7 @@ const getCanteens = function (callback, date) {
 				return callback('Cannot connect to kanttiinit.fi!')
 			canteens = JSON.parse(body)
 			canteens = canteens.filter(y => y.openingHours[moment().isoWeekday()-1] != null)
-			let message = 'Open restaurants today:\n'
+			let message = 'Open restaurants *today*:\n'
 			canteens.forEach(canteen => {
 				message += `${canteen.name}\t ${canteen.openingHours[moment().isoWeekday()-1]}\n📍[Address](https://www.google.com/maps/search/?api=1&query=${canteen.address})\n\n`
 			});
@@ -108,14 +108,13 @@ bot.on('inline_query', async ({ inlineQuery, answerInlineQuery }) => {
 				return {
 					type: 'article',
 					id: crypto.createHash('md5').update(msg).digest('hex'),
-					title: msg,
+					title: canteens.filter(y => y.id == x.id)[0].name,
 					input_message_content: {
 						message_text: msg,
 						parse_mode: 'HTML',
 					}
 				}
 			})
-			console.log(results)
 			answerInlineQuery(results)
 		})
 		
