@@ -184,19 +184,31 @@ bot.on('inline_query', async ({ inlineQuery, answerInlineQuery }) => {
 	console.log('Inline query received')
 	getCanteens(() => {
 		console.log('Menus available:' + menus.length)
-		let results = menus.filter(x => x.menu).map((x, i) => {
-			let msg = msgCanteenMenu(x)
-			return {
-				type: 'article',
-				id: crypto.createHash('md5').update(msg).digest('hex'),
-				title: canteens.filter(y => y.id == x.id)[0].name,
-				input_message_content: {
-					message_text: msg,
-					parse_mode: 'HTML',
+		if (menus.length > 0) {
+			let results = menus.filter(x => x.menu).map((x, i) => {
+				let msg = msgCanteenMenu(x)
+				return {
+					type: 'article',
+					id: crypto.createHash('md5').update(msg).digest('hex'),
+					title: canteens.filter(y => y.id == x.id)[0].name,
+					input_message_content: {
+						message_text: msg,
+						parse_mode: 'HTML',
+					}
 				}
-			}
-		})
-		answerInlineQuery(results)
+			})
+			answerInlineQuery(results,
+				{
+					switch_pm_text: 'Open restaurants today:',
+					switch_pm_parameter: 'split'
+				})
+		}
+		else {
+			return answerInlineQuery([], {
+				switch_pm_text: 'No open restaurants today.',
+				switch_pm_parameter: 'split'
+			})
+		}
 	}, undefined)
 })
 
