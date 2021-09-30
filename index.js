@@ -194,7 +194,10 @@ bot.on('inline_query', async ({ inlineQuery, answerInlineQuery }) => {
 					input_message_content: {
 						message_text: msg,
 						parse_mode: 'HTML',
-					}
+					},
+					reply_markup: Markup.inlineKeyboard([
+						Markup.urlButton(`Allergens ℹ️`, `https://telegra.ph/Allergens-information-%E2%84%B9-09-30`)
+					])
 				}
 			})
 			answerInlineQuery(results,
