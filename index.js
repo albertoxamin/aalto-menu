@@ -21,73 +21,6 @@ const job = schedule.scheduleJob('0 */1 * * *', function () {
 });
 
 
-const allergens = [
-	{
-		desired: false,
-		key: 'A+',
-		name_en: 'contains allergens',
-		name_fi: 'sisältää allergeeneja'
-	},
-	{
-		desired: false,
-		key: 'C+',
-		name_en: 'contains celery',
-		name_fi: 'sisältää selleriä'
-	},
-	{
-		desired: true,
-		key: 'E',
-		name_en: 'egg-free',
-		name_fi: 'ei sisällä kananmunaa'
-	},
-	{ key: 'G', desired: true, name_en: 'gluten-free', name_fi: 'gluteeniton' },
-	{
-		desired: true,
-		key: 'H',
-		name_en: 'healthier choice',
-		name_fi: 'terveellisempi valinta'
-	},
-	{ key: 'L', desired: true, name_en: 'lactose-free', name_fi: 'laktoositon' },
-	{
-		desired: true,
-		key: 'LL',
-		name_en: 'low in lactose',
-		name_fi: 'vähälaktoosinen'
-	},
-	{
-		desired: true,
-		key: 'M',
-		name_en: 'milk-free',
-		name_fi: 'ei sisällä maitoa'
-	},
-	{
-		desired: false,
-		key: 'N+',
-		name_en: 'contains nuts',
-		name_fi: 'sisältää pähkinää'
-	},
-	{
-		desired: false,
-		key: 'O+',
-		name_en: 'contains garlic',
-		name_fi: 'sisältää valkosipulia'
-	},
-	{
-		desired: true,
-		key: 'S',
-		name_en: 'soy-free',
-		name_fi: 'ei sisällä soijaa'
-	},
-	{
-		desired: false,
-		key: 'S+',
-		name_en: 'contains soy',
-		name_fi: 'sisältää soijaa'
-	},
-	{ key: 'V', desired: true, name_en: 'vegetarian', name_fi: 'vegetaarinen' },
-	{ key: 'VV', desired: true, name_en: 'vegan', name_fi: 'vegaani' }
-]
-
 
 const msgCanteenMenu = (obj) => {
 	let canteen = canteens.filter(x => x.id === obj.id)[0]
@@ -120,13 +53,11 @@ bot.on('callback_query', (ctx) => {
 		let obj = menus.filter(x => x.id == id)[0]
 		if (obj) {
 			ctx.replyWithHTML(msgCanteenMenu(obj), Markup.inlineKeyboard(
-				[Markup.callbackButton('Allergens ℹ️', 'allergens')]
+				[Markup.urlButton(`Allergens ℹ️`, `https://telegra.ph/Allergens-information-%E2%84%B9-09-30`)]
 			).extra())
 		} else {
 			ctx.replyWithMarkdown(`*${canteens.filter(x => x.id == id)[0].name}* No menu for today!`)
 		}
-	} else if (data.indexOf('allergens') != -1) {
-		ctx.replyWithMarkdown(`${allergens.map(x => `*${x.key}* ${x.name_en}`).join('\n')}`)
 	}
 })
 
